@@ -38,6 +38,13 @@ private:
     Info info_;
 };
 
+class LoadingFilterError : public std::runtime_error {
+public:
+    explicit LoadingFilterError(const char* message);
+
+    explicit LoadingFilterError(const std::string& message);
+};
+
 }   // namespace abe
 
 #endif  // KADBLOCKENGINE_ADBLOCK_ENGINE_AD_FILTER_H_

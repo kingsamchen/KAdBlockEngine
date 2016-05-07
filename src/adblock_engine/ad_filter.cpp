@@ -32,8 +32,7 @@ namespace abe {
 AdFilter::AdFilter(const kbase::Path& filter_file_path)
 {
     std::string filter_data = kbase::ReadFileToString(filter_file_path);
-    // TODO: throw our own exception type.
-    ENSURE(RAISE, !filter_data.empty()).Require();
+    ENSURE(RAISE, !filter_data.empty()).Require<LoadingFilterError>();
     kbase::Tokenizer data_lines(filter_data, "\r\n");
     for (auto&& line : data_lines) {
         if (line.empty()) {
@@ -76,5 +75,13 @@ void AdFilter::LoadFilterInfo(kbase::StringView comment)
         info_.last_modified = comment.substr(colon_pos + 2).ToString();
     }
 }
+
+LoadingFilterError::LoadingFilterError(const char* message)
+    : runtime_error(message)
+{}
+
+LoadingFilterError::LoadingFilterError(const std::string& message)
+    : runtime_error(message)
+{}
 
 }   // namespace abe
