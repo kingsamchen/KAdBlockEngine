@@ -4,6 +4,7 @@
 
 #include "adblock_engine/ad_filter.h"
 
+#include <algorithm>
 #include <map>
 #include <regex>
 #include <tuple>
@@ -28,6 +29,9 @@ constexpr const char kLastModifiedTagName[] = "Last Modified";
 const std::regex kRuleKeywordRegexPat("[^a-z0-9%*][a-z0-9%]{3,}(?=[^a-z0-9%*])",
                                       std::regex_constants::ECMAScript |
                                       std::regex_constants::optimize);
+const std::regex kURLKeywordRegexPat("[a-z0-9%]{3,}",
+                                     std::regex_constants::ECMAScript |
+                                     std::regex_constants::optimize);
 
 enum ContentType : unsigned int {
     OTHER = 1U << 0,
@@ -295,6 +299,30 @@ void AdFilter::AddRule(kbase::StringView rule_text)
         std::string keyword = FindRuleKeyword(rule.text, target_rule_set);
         target_rule_set[keyword].push_back(std::move(rule));
     }
+}
+
+MatchResult AdFilter::MatchAny(const std::string& request_url, const std::string& request_domain,
+                               unsigned int content_type, bool third_party)
+{
+    std::vector<std::string> candidates;
+    std::sregex_iterator token_it(request_url.begin(), request_url.end(), kURLKeywordRegexPat);
+    std::transform(token_it, std::sregex_iterator(), std::back_inserter(candidates),
+                   [](const auto& match)->std::string {
+        return match.str(0);
+    });
+
+    // Don't forget rules that associate with the empty keyword.
+    candidates.push_back(std::string());
+
+    for (const auto& candidate : candidates) {
+        auto result = CheckRuleMatch(candidate, request_url, request_domain, content_type,
+                                     third_party);
+        if (result != MatchResult::NOT_MATCHED) {
+            return result;
+        }
+    }
+
+    return MatchResult::NOT_MATCHED;
 }
 
 LoadingFilterError::LoadingFilterError(const char* message)
