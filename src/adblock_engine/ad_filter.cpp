@@ -198,6 +198,109 @@ std::string FindRuleKeyword(const std::string& rule_text, const RuleMap& rule_se
     return keyword;
 }
 
+bool ApplyOnContentType(const Rule& rule, unsigned int request_content_type)
+{
+    // If the user of the engine has another set of content type definition,
+    // then you should provide your own mapping here.
+    return (rule.content_type & request_content_type) != 0;
+}
+
+bool ApplyOnThirdParty(const Rule& rule, bool third_party)
+{
+    bool matched = false;
+    switch (rule.third_party) {
+        case ThirdParty::NOT_SPECIFIED:
+            matched = true;
+            break;
+
+        case ThirdParty::EXCLUSIVE:
+            matched = third_party;
+            break;
+
+        case ThirdParty::EXCLUDED:
+            matched = !third_party;
+            break;
+
+        default:
+            ENSURE(CHECK, kbase::NotReached()).Require();
+    }
+
+    return matched;
+}
+
+bool ApplyOnDomain(const Rule& rule, const std::string& request_domain)
+{
+    // No domain restrictions. The domain option of the rule is always applied.
+    if (rule.domains.empty()) {
+        return true;
+    }
+
+    std::vector<std::string> domains;
+    kbase::SplitString(rule.domains, "|", domains);
+
+    // Inverted domains have higher precedence.
+    std::partition(domains.begin(), domains.end(), [](const auto& domain) {
+        return domain[0] == '~';
+    });
+
+    for (const auto& domain : domains) {
+        bool inversed = false;
+        kbase::StringView domain_view(domain);
+        if (domain_view[0] == '~') {
+            inversed = true;
+            domain_view.RemovePrefix(1);
+        }
+
+        if (kbase::EndsWith(request_domain, domain_view, false)) {
+            auto length_diff = request_domain.length() - domain_view.length();
+            if (length_diff > 0) {
+                if (request_domain[length_diff - 1] == '.') {
+                    return !inversed;
+                }
+            } else {
+                return !inversed;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool ApplyOnURL(Rule& rule, const std::string& request_url)
+{
+    UNREFED_VAR(rule);
+    UNREFED_VAR(request_url);
+    // TODO: keep transformed regex?
+    return false;
+}
+
+bool CheckRuleApply(Rule& rule, const std::string& request_url, const std::string& request_domain,
+                    unsigned int content_type, bool third_pary)
+{
+    return  ApplyOnContentType(rule, content_type) &&
+            ApplyOnThirdParty(rule, third_pary) &&
+            ApplyOnDomain(rule, request_domain) &&
+            ApplyOnURL(rule, request_url);
+}
+
+bool CheckRuleMatch(RuleMap& rule_set, const std::string& keyword, const std::string& request_url,
+                    const std::string& request_domain, unsigned int content_type, bool third_pary)
+{
+    auto it = rule_set.find(keyword);
+    if (it == rule_set.end()) {
+        return false;
+    }
+
+    auto& rules = it->second;
+    for (Rule& rule : rules) {
+        if (CheckRuleApply(rule, request_url, request_domain, content_type, third_pary)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 }   // namespace
 
 namespace abe {
@@ -315,10 +418,14 @@ MatchResult AdFilter::MatchAny(const std::string& request_url, const std::string
     candidates.push_back(std::string());
 
     for (const auto& candidate : candidates) {
-        auto result = CheckRuleMatch(candidate, request_url, request_domain, content_type,
-                                     third_party);
-        if (result != MatchResult::NOT_MATCHED) {
-            return result;
+        if (CheckRuleMatch(exception_rules_, candidate, request_url, request_domain, content_type,
+                           third_party)) {
+            return MatchResult::EXCEPTION_MATCHED;
+        }
+
+        if (CheckRuleMatch(blocking_rules_, candidate, request_url, request_domain, content_type,
+                           third_party)) {
+            return MatchResult::BLOCKING_MATCHED;
         }
     }
 

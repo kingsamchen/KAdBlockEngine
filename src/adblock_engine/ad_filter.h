@@ -89,12 +89,6 @@ private:
 
     void AddRule(kbase::StringView rule);
 
-    MatchResult CheckRuleMatch(const std::string& keyword,
-                               const std::string& request_url,
-                               const std::string& request_domain,
-                               unsigned int content_type,
-                               bool third_pary);
-
 private:
     Info info_;
     RuleMap blocking_rules_;
