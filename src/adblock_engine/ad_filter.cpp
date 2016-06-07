@@ -26,12 +26,11 @@ constexpr const char kVersionTagName[] = "Version";
 constexpr const char kTitleTagName[] = "Title";
 constexpr const char kLastModifiedTagName[] = "Last Modified";
 
-const std::regex kRuleKeywordRegexPat("[^a-z0-9%*][a-z0-9%]{3,}(?=[^a-z0-9%*])",
-                                      std::regex_constants::ECMAScript |
-                                      std::regex_constants::optimize);
-const std::regex kURLKeywordRegexPat("[a-z0-9%]{3,}",
-                                     std::regex_constants::ECMAScript |
-                                     std::regex_constants::optimize);
+constexpr const auto kOptFlag = std::regex_constants::ECMAScript | std::regex_constants::optimize;
+
+const std::regex kRuleKeywordRegexPat("[^a-z0-9%*][a-z0-9%]{3,}(?=[^a-z0-9%*])", kOptFlag);
+const std::regex kURLKeywordRegexPat("[a-z0-9%]{3,}", kOptFlag);
+const std::regex kEscapeSpecialSymbolPat("\\W", kOptFlag);
 
 enum ContentType : unsigned int {
     OTHER = 1U << 0,
@@ -101,6 +100,11 @@ bool IsExceptionRule(kbase::StringView rule)
 bool IsExceptionElemHideRule(kbase::StringView rule)
 {
     return rule.find("#@#") != kbase::StringView::npos;
+}
+
+bool IsRegexRuleText(const std::string& rule_text)
+{
+    return rule_text.front() == '/' && rule_text.back() == '/';
 }
 
 // Make sure that `rule_text` doesn't prefix with @@.
@@ -176,7 +180,7 @@ std::string FindRuleKeyword(const std::string& rule_text, const RuleMap& rule_se
     std::string keyword;
 
     // We don't need a keyword for a regular expression rule.
-    if (rule_text.front() == '/' && rule_text.back() == '/') {
+    if (IsRegexRuleText(rule_text)) {
         return keyword;
     }
 
@@ -200,8 +204,58 @@ std::string FindRuleKeyword(const std::string& rule_text, const RuleMap& rule_se
 
 void TransformRule(Rule& rule)
 {
-    UNREFED_VAR(rule);
-    // TODO:
+    // The transformation would be done in either way.
+    rule.transformed = true;
+    std::string& text = rule.text;
+
+    if (IsRegexRuleText(text)) {
+        text = text.substr(1, text.length() - 2);
+        return;
+    }
+
+    // Try not to use regex to do replacement unless we have to.
+
+    // Remove multiple wildcards.
+    text.erase(std::unique(text.begin(), text.end(), [](const char& lch, const char& rch) {
+        return lch == '*' && rch == '*';
+    }), text.end());
+
+    // Remove anchors following separator placeholder.
+    if (kbase::EndsWith(text, "^|")) {
+        text.pop_back();
+    }
+
+    // Escape special symbols.
+    text = std::regex_replace(text, kEscapeSpecialSymbolPat, "\\$&");
+
+    // Replace wildcards by `.*`.
+    kbase::ReplaceSubstring(text, "\\*", ".*");
+
+    // Process separator placeholders (all ANSI characters but alphanumeric characters and _%.-).
+    kbase::ReplaceSubstring(text, "\\^", "(?:[\\x00-\\x24\\x26-\\x2C\\x2F\\x3A-\\x40\\x5B-\\x5E\\x60\\x7B-\\x7F]|$)");
+    if (kbase::StartsWith(text, "\\|\\|")) {
+        kbase::ReplaceSubstring(text, "\\|\\|", "^[\\w\\-]+:\\/+(?!\\/)(?:[^\\/]+\\.)?", 0, false);
+    }
+
+    // Process anchor at expression start.
+    if (kbase::StartsWith(text, "\\|")) {
+        kbase::ReplaceSubstring(text, "\\|", "^", 0, false);
+    }
+
+    // Process anchor at expression end.
+    if (kbase::EndsWith(text, "\\|")) {
+        kbase::ReplaceSubstring(text, "\\|", "$", text.length() - 2);
+    }
+
+    // Remove leading wildcards.
+    if (kbase::StartsWith(text, ".*")) {
+        kbase::ReplaceSubstring(text, ".*", "", 0, false);
+    }
+
+    // Remove trailing wildcards.
+    if (kbase::EndsWith(text, ".*")) {
+        kbase::ReplaceSubstring(text, ".*", "", text.length() - 2);
+    }
 }
 
 bool ApplyOnContentType(const Rule& rule, unsigned int request_content_type)
