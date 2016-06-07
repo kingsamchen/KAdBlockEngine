@@ -198,6 +198,12 @@ std::string FindRuleKeyword(const std::string& rule_text, const RuleMap& rule_se
     return keyword;
 }
 
+void TransformRule(Rule& rule)
+{
+    UNREFED_VAR(rule);
+    // TODO:
+}
+
 bool ApplyOnContentType(const Rule& rule, unsigned int request_content_type)
 {
     // If the user of the engine has another set of content type definition,
@@ -268,10 +274,19 @@ bool ApplyOnDomain(const Rule& rule, const std::string& request_domain)
 
 bool ApplyOnURL(Rule& rule, const std::string& request_url)
 {
-    UNREFED_VAR(rule);
-    UNREFED_VAR(request_url);
-    // TODO: keep transformed regex?
-    return false;
+    if (!rule.transformed) {
+        TransformRule(rule);
+    }
+
+    auto flag = std::regex_constants::ECMAScript;
+    if (rule.match_case) {
+        flag |= std::regex_constants::icase;
+    }
+
+    std::regex rule_pat(rule.text, flag);
+    bool matched = std::regex_search(request_url, rule_pat);
+
+    return matched;
 }
 
 bool CheckRuleApply(Rule& rule, const std::string& request_url, const std::string& request_domain,
@@ -309,6 +324,7 @@ Rule::Rule(std::string rule_text)
     : match_case(false),
       third_party(ThirdParty::NOT_SPECIFIED),
       content_type(kDefaultContentType),
+      transformed(false),
       text(std::move(rule_text))
 {}
 

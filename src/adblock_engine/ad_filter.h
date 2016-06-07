@@ -37,7 +37,8 @@ struct Rule {
     ThirdParty third_party;
     unsigned int content_type;
     std::string domains;
-    std::string text;   // The text contains no qualifiers(such as, exception prefix and options).
+    bool transformed;   // Has the `text` been transformed into a regex literal.
+    std::string text;   // The `text` contains no qualifiers(e.g. exception prefix and options).
 
     explicit Rule(std::string rule_text);
 };
