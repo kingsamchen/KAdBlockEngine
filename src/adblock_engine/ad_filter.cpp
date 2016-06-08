@@ -122,14 +122,14 @@ StringViewPair SplitRuleOptions(kbase::StringView rule_text)
     return std::make_tuple(rule, options);
 }
 
-// Returns a pair that contains domains the rule applies on, delimited by `delim`.
+// Returns a pair that contains domains the rule applies on.
 // Note that `domains` may be empty.
 StringViewPair SplitOptionDomain(kbase::StringView field)
 {
     auto delim_pos = field.find('=');
     auto domain_tag = field.substr(0, delim_pos);
     auto domains = delim_pos == kbase::StringView::npos ? kbase::StringView() :
-                                                        field.substr(delim_pos + 1);
+                                                          field.substr(delim_pos + 1);
     return std::make_tuple(domain_tag, domains);
 }
 
@@ -174,22 +174,26 @@ void ParseRuleOptions(kbase::StringView option_text, Rule& rule)
     }
 }
 
+// Returns a keyword (may be an empty string) for fast locating the rule.
 // Make sure that `rule_text` doesn't have either @@ prefix, or options part.
 std::string FindRuleKeyword(const std::string& rule_text, const RuleMap& rule_set)
 {
     std::string keyword;
 
-    // We don't need a keyword for a regular expression rule.
+    // We always use an empty string as the keyword for a regular expression rule.
+    // Afterall, there are only a few of them.
     if (IsRegexRuleText(rule_text)) {
         return keyword;
     }
 
+    // If the rule text is too short to find a representative keyword, fallback to
+    // an empty string.
     size_t keyword_rule_count = static_cast<size_t>(-1);
     size_t keyword_length = 0U;
     std::sregex_iterator candidate_it(rule_text.begin(), rule_text.end(), kRuleKeywordRegexPat);
     std::sregex_iterator end;
     for (; candidate_it != end; ++candidate_it) {
-        auto&& candidate = candidate_it->str(0);
+        auto&& candidate = candidate_it->str(0).substr(1);
         size_t count = rule_set.count(candidate) > 0 ? rule_set.at(candidate).size() : 0;
         if (count < keyword_rule_count ||
             (count == keyword_rule_count && candidate.length() > keyword_length)) {
@@ -202,6 +206,8 @@ std::string FindRuleKeyword(const std::string& rule_text, const RuleMap& rule_se
     return keyword;
 }
 
+// Transform the rule text into an equivalent regex literal.
+// Since this process may cost, we keep the outcome for subsequent uses.
 void TransformRule(Rule& rule)
 {
     // The transformation would be done in either way.
@@ -333,7 +339,7 @@ bool ApplyOnURL(Rule& rule, const std::string& request_url)
     }
 
     auto flag = std::regex_constants::ECMAScript;
-    if (rule.match_case) {
+    if (!rule.match_case) {
         flag |= std::regex_constants::icase;
     }
 
@@ -343,6 +349,8 @@ bool ApplyOnURL(Rule& rule, const std::string& request_url)
     return matched;
 }
 
+// Returns true, if the `rule` applies to the `request_url`.
+// Returns false, otherwise.
 bool CheckRuleApply(Rule& rule, const std::string& request_url, const std::string& request_domain,
                     unsigned int content_type, bool third_pary)
 {
@@ -352,6 +360,8 @@ bool CheckRuleApply(Rule& rule, const std::string& request_url, const std::strin
             ApplyOnURL(rule, request_url);
 }
 
+// Returns true, if there is a rule in the `rule_set` matches the `request_url`.
+// Returns false, otherwise.
 bool CheckRuleMatch(RuleMap& rule_set, const std::string& keyword, const std::string& request_url,
                     const std::string& request_domain, unsigned int content_type, bool third_pary)
 {

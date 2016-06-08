@@ -61,9 +61,13 @@ inline bool operator==(const ElemHideRule& lhs, const ElemHideRule& rhs)
     return lhs.text == rhs.text;
 }
 
+// RuleMap: keyword -> a list of rules.
+// ElemHideRuleMap: rule -> a set of domains.
 using RuleMap = std::unordered_map<std::string, std::vector<Rule>>;
 using ElemHideRuleMap = std::unordered_map<ElemHideRule, std::set<std::string>, ElemHideRuleHash>;
 
+// An AdFilter instance represents a subscribed filter stored in a physical file on the disk.
+// Each AdFilter instance is identified by the path of the rule file.
 class AdFilter {
 public:
     struct Info {
