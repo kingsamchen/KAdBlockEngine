@@ -9,7 +9,6 @@
 #ifndef KADBLOCKENGINE_ADBLOCK_ENGINE_AD_FILTER_H_
 #define KADBLOCKENGINE_ADBLOCK_ENGINE_AD_FILTER_H_
 
-#include <set>
 #include <unordered_map>
 #include <vector>
 
@@ -64,7 +63,7 @@ inline bool operator==(const ElemHideRule& lhs, const ElemHideRule& rhs)
 // RuleMap: keyword -> a list of rules.
 // ElemHideRuleMap: rule -> a set of domains.
 using RuleMap = std::unordered_map<std::string, std::vector<Rule>>;
-using ElemHideRuleMap = std::unordered_map<ElemHideRule, std::set<std::string>, ElemHideRuleHash>;
+using ElemHideRuleMap = std::unordered_map<ElemHideRule, std::vector<std::string>, ElemHideRuleHash>;
 
 // An AdFilter instance represents a subscribed filter stored in a physical file on the disk.
 // Each AdFilter instance is identified by the path of the rule file.

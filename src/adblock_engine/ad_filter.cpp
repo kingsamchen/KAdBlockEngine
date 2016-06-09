@@ -453,16 +453,16 @@ void AdFilter::AddRule(kbase::StringView rule_text)
             for (auto&& domain : domain_tokens) {
                 if (is_exception) {
                     if (domain[0] != '~') {
-                        exception_elem_hide_rules_[rule].insert(domain.ToString());
+                        exception_elem_hide_rules_[rule].push_back(domain.ToString());
                     }
                 } else {
-                    elem_hide_rules_[rule].insert(domain.ToString());
+                    elem_hide_rules_[rule].push_back(domain.ToString());
                 }
             }
         } else {
             // It's meaningless for an unconditional rule being an exception rule.
             if (!is_exception) {
-                elem_hide_rules_[rule].insert("");
+                elem_hide_rules_[rule].push_back("");
             }
         }
     } else {
