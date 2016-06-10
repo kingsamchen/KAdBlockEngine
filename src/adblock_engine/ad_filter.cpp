@@ -264,6 +264,24 @@ void TransformRule(Rule& rule)
     }
 }
 
+// Returns true, if `test_domain` represents the same domain as `criteria_domain`.
+// Returns false, otherwise.
+bool IsSameDomainAs(kbase::StringView test_domain, kbase::StringView criteria_domain)
+{
+    if (kbase::EndsWith(test_domain, criteria_domain, false)) {
+        auto length_diff = test_domain.length() - criteria_domain.length();
+        if (length_diff > 0) {
+            if (test_domain[length_diff - 1] == '.') {
+                return true;
+            }
+        } else {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool ApplyOnContentType(const Rule& rule, unsigned int request_content_type)
 {
     // If the user of the engine has another set of content type definition,
@@ -317,15 +335,8 @@ bool ApplyOnDomain(const Rule& rule, const std::string& request_domain)
             domain_view.RemovePrefix(1);
         }
 
-        if (kbase::EndsWith(request_domain, domain_view, false)) {
-            auto length_diff = request_domain.length() - domain_view.length();
-            if (length_diff > 0) {
-                if (request_domain[length_diff - 1] == '.') {
-                    return !inversed;
-                }
-            } else {
-                return !inversed;
-            }
+        if (IsSameDomainAs(request_domain, domain_view)) {
+            return !inversed;
         }
     }
 
@@ -510,6 +521,37 @@ MatchResult AdFilter::MatchAny(const std::string& request_url, const std::string
     }
 
     return MatchResult::NOT_MATCHED;
+}
+
+void AdFilter::FetchElementHideRules(const std::string& request_domain,
+                                     std::set<ElemHideRule>& rules,
+                                     std::set<ElemHideRule>& exception_rules) const
+{
+    for (const auto& rule_pair : elem_hide_rules_) {
+        // If the same rule already exists in another filter,
+        // we skip it regradless of whether associated domains are the same.
+        if (rules.count(rule_pair.first) == 0) {
+            const auto& domains = rule_pair.second;
+            if (std::any_of(domains.cbegin(), domains.cend(),
+                            [&request_domain](const auto& domain) {
+                return domain.empty() || IsSameDomainAs(request_domain, domain);
+            })) {
+                rules.insert(rule_pair.first);
+            }
+        }
+    }
+
+    for (const auto& rule_pair : exception_elem_hide_rules_) {
+        if (exception_rules.count(rule_pair.first) == 0) {
+            const auto& domains = rule_pair.second;
+            if (std::any_of(domains.cbegin(), domains.cend(),
+                            [&request_domain](const auto& domain) {
+                return IsSameDomainAs(request_domain, domain);
+            })) {
+                exception_rules.insert(rule_pair.first);
+            }
+        }
+    }
 }
 
 LoadingFilterError::LoadingFilterError(const char* message)

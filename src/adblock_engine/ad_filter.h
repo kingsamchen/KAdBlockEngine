@@ -9,6 +9,7 @@
 #ifndef KADBLOCKENGINE_ADBLOCK_ENGINE_AD_FILTER_H_
 #define KADBLOCKENGINE_ADBLOCK_ENGINE_AD_FILTER_H_
 
+#include <set>
 #include <unordered_map>
 #include <vector>
 
@@ -60,10 +61,16 @@ inline bool operator==(const ElemHideRule& lhs, const ElemHideRule& rhs)
     return lhs.text == rhs.text;
 }
 
+inline bool operator<(const ElemHideRule& lhs, const ElemHideRule& rhs)
+{
+    return lhs.text < rhs.text;
+}
+
 // RuleMap: keyword -> a list of rules.
 // ElemHideRuleMap: rule -> a set of domains.
 using RuleMap = std::unordered_map<std::string, std::vector<Rule>>;
-using ElemHideRuleMap = std::unordered_map<ElemHideRule, std::vector<std::string>, ElemHideRuleHash>;
+using ElemHideRuleMap = std::unordered_map<ElemHideRule, std::vector<std::string>,
+                                           ElemHideRuleHash>;
 
 // An AdFilter instance represents a subscribed filter stored in a physical file on the disk.
 // Each AdFilter instance is identified by the path of the rule file.
@@ -85,6 +92,11 @@ public:
                          const std::string& request_domain,
                          unsigned int content_type,
                          bool third_party);
+
+    // We can't just return filtered element hide rules, because there may be some rules that
+    // would be inverted by exception rules in other filters.
+    void FetchElementHideRules(const std::string& request_domain, std::set<ElemHideRule>& rules,
+                               std::set<ElemHideRule>& exception_rules) const;
 
     const Info& GetFilterInfo() const;
 
