@@ -1,0 +1,3 @@
+[submodule "libs/KBase"]
+	path = libs/KBase
+	url = git@github.com:kingsamchen/KBase.git
