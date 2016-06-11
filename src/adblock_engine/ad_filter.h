@@ -84,7 +84,11 @@ public:
 
     explicit AdFilter(const kbase::Path& filter_file_path);
 
+    AdFilter(AdFilter&& other) = default;
+
     ~AdFilter() = default;
+
+    AdFilter& operator=(AdFilter&& rhs) = default;
 
     DISALLOW_COPY(AdFilter);
 
