@@ -22,4 +22,25 @@ void AdFilterManager::UnloadAdFilter(const kbase::Path& filter_file_path)
     ad_filters_.erase(it, ad_filters_.end());
 }
 
+bool AdFilterManager::ShouldBlockRequest(const std::string& request_url,
+                                         const std::string& request_domain,
+                                         unsigned content_type,
+                                         bool third_party) const
+{
+    bool blocking_rule_hit = false;
+    for (const auto& filter_pair : ad_filters_) {
+        // Logically, filter here is still constness, with respect the manager;
+        // but we have to cast its bitwise constness away.
+        AdFilter& filter = const_cast<AdFilter&>(filter_pair.second);
+        auto result = filter.MatchAny(request_url, request_domain, content_type, third_party);
+        if (result == MatchResult::BLOCKING_MATCHED) {
+            blocking_rule_hit = true;
+        } else if (result == MatchResult::EXCEPTION_MATCHED) {
+            return false;
+        }
+    }
+
+    return blocking_rule_hit;
+}
+
 }   // namespace abe
