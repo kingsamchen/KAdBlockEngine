@@ -4,8 +4,6 @@
 
 #include "adblock_engine/ad_filter_manager.h"
 
-#include "kbase/string_util.h"
-
 namespace abe {
 
 void AdFilterManager::LoadAdFilter(const kbase::Path& filter_file_path)
@@ -47,6 +45,8 @@ bool AdFilterManager::ShouldBlockRequest(const std::string& request_url,
 
 std::string AdFilterManager::GetElementHideContent(const std::string& request_domain) const
 {
+    constexpr const kbase::StringView kJoinDelim(", ", 2);
+
     std::set<ElemHideRule> rules;
     std::set<ElemHideRule> exception_rules;
     for (const auto& filter_pair : ad_filters_) {
@@ -54,12 +54,15 @@ std::string AdFilterManager::GetElementHideContent(const std::string& request_do
     }
 
     std::string element_hide_rule;
+    element_hide_rule.reserve(rules.size() - exception_rules.size());
     for (auto it = rules.begin(); it != rules.end(); ++it) {
         if (exception_rules.count(*it) == 0) {
-            element_hide_rule.append(it->text).append(", ");
+            element_hide_rule.append(it->text).append(kJoinDelim.data());
         }
     }
 
+    // Get rid of tailing `, `.
+    element_hide_rule.resize(element_hide_rule.length() - kJoinDelim.length());
     return element_hide_rule;
 }
 
