@@ -4,6 +4,8 @@
 
 #include "adblock_engine/ad_filter_manager.h"
 
+#include "kbase/string_util.h"
+
 namespace abe {
 
 void AdFilterManager::LoadAdFilter(const kbase::Path& filter_file_path)
@@ -41,6 +43,24 @@ bool AdFilterManager::ShouldBlockRequest(const std::string& request_url,
     }
 
     return blocking_rule_hit;
+}
+
+std::string AdFilterManager::GetElementHideContent(const std::string& request_domain) const
+{
+    std::set<ElemHideRule> rules;
+    std::set<ElemHideRule> exception_rules;
+    for (const auto& filter_pair : ad_filters_) {
+        filter_pair.second.FetchElementHideRules(request_domain, rules, exception_rules);
+    }
+
+    std::string element_hide_rule;
+    for (auto it = rules.begin(); it != rules.end(); ++it) {
+        if (exception_rules.count(*it) == 0) {
+            element_hide_rule.append(it->text).append(", ");
+        }
+    }
+
+    return element_hide_rule;
 }
 
 }   // namespace abe
