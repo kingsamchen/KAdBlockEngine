@@ -7,8 +7,10 @@
 #include <iostream>
 
 #include "kbase/error_exception_util.h"
+#include "kbase/file_util.h"
 
 #include "adblock_engine/ad_filter.h"
+#include "adblock_engine/ad_filter_manager.h"
 
 void TestAdFilterMatchAny(abe::AdFilter& ad_filter)
 {
@@ -26,12 +28,24 @@ void TestAdFilterElementHide(const abe::AdFilter& ad_filter)
     std::cout << "-> " << __FUNCTION__ << " passed\n";
 }
 
+void TestAdFilterSerialization(const kbase::Path& filter_file)
+{
+    abe::AdFilterManager ad_filter_manager;
+    ad_filter_manager.LoadAdFilter(filter_file);
+    ad_filter_manager.SnapshotAdFilter(filter_file);
+    kbase::Path snapshot_file(filter_file);
+    snapshot_file.ReplaceExtension(L".abx");
+    ENSURE(CHECK, kbase::PathExists(snapshot_file)).Require();
+    std::cout << "-> " << __FUNCTION__ << " passed\n";
+}
+
 int main()
 {
-    kbase::Path filter_path(LR"(C:\Projects\KAdBlockEngine\src\test\easylistchina.txt)");
-    abe::AdFilter ad_filter(filter_path);
-    TestAdFilterMatchAny(ad_filter);
-    TestAdFilterElementHide(ad_filter);
+    kbase::Path filter_path(LR"(src\test\easylistchina.txt)");
+    //abe::AdFilter ad_filter(filter_path);
+    //TestAdFilterMatchAny(ad_filter);
+    //TestAdFilterElementHide(ad_filter);
+    TestAdFilterSerialization(filter_path);
     _getch();
     return 0;
 }

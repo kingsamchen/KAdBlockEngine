@@ -16,7 +16,6 @@
 
 namespace {
 
-using abe::AdFilter;
 using abe::Rule;
 using abe::RuleMap;
 using abe::ThirdParty;

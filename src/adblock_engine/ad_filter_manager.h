@@ -39,6 +39,9 @@ public:
 
     std::string GetElementHideContent(const std::string& request_domain) const;
 
+    // Creates a snapshot file on disk for the AdFilter indicated by `filter_file`.
+    void SnapshotAdFilter(const kbase::Path& filter_file) const;
+
 private:
     using AdFilterPair = std::pair<kbase::Path, AdFilter>;
     std::vector<AdFilterPair> ad_filters_;

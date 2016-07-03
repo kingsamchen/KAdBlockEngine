@@ -4,6 +4,17 @@
 
 #include "adblock_engine/ad_filter_manager.h"
 
+#include <fstream>
+
+#include "kbase/logging.h"
+#include "kbase/md5.h"
+
+namespace {
+
+constexpr const wchar_t kSnapshotFileExtension[] = L".abx";
+
+}   // namespace
+
 namespace abe {
 
 void AdFilterManager::LoadAdFilter(const kbase::Path& filter_file)
@@ -64,6 +75,32 @@ std::string AdFilterManager::GetElementHideContent(const std::string& request_do
     // Get rid of tailing `, `.
     element_hide_rule.resize(element_hide_rule.length() - kJoinDelim.length());
     return element_hide_rule;
+}
+
+void AdFilterManager::SnapshotAdFilter(const kbase::Path& filter_file) const
+{
+    auto it = std::find_if(ad_filters_.cbegin(), ad_filters_.cend(),
+                           [&filter_file](const auto& pair) {
+                               return pair.first == filter_file;
+                           });
+    if (it == ad_filters_.cend()) {
+        return;
+    }
+
+    kbase::Pickle&& snapshot = it->second.TakeSnapshot();
+    kbase::MD5Digest checksum;
+    kbase::MD5Sum(snapshot.data(), snapshot.size(), &checksum);
+
+    kbase::Path snapshot_file(filter_file);
+    snapshot_file.ReplaceExtension(kSnapshotFileExtension);
+    std::ofstream out(snapshot_file.value(), std::ios::binary);
+    if (!out) {
+        LOG(WARNING) << "Failed to create snapshot file for " << snapshot_file.AsUTF8();
+        return;
+    }
+
+    out.write(reinterpret_cast<const char*>(checksum.data()), checksum.size());
+    out.write(static_cast<const char*>(snapshot.data()), snapshot.size());
 }
 
 }   // namespace abe
