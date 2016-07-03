@@ -83,7 +83,7 @@ public:
         std::string last_modified;
     };
 
-    explicit AdFilter(const kbase::Path& filter_file_path);
+    explicit AdFilter(const kbase::Path& filter_file);
 
     AdFilter(AdFilter&& other) = default;
 

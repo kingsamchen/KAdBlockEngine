@@ -433,9 +433,9 @@ ElemHideRule::ElemHideRule(std::string rule_text)
     : text(std::move(rule_text))
 {}
 
-AdFilter::AdFilter(const kbase::Path& filter_file_path)
+AdFilter::AdFilter(const kbase::Path& filter_file)
 {
-    std::string filter_data = kbase::ReadFileToString(filter_file_path);
+    std::string filter_data = kbase::ReadFileToString(filter_file);
     ENSURE(RAISE, !filter_data.empty()).Require<LoadingFilterError>();
     kbase::Tokenizer data_lines(filter_data, "\r\n");
     for (auto&& line : data_lines) {

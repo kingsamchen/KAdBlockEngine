@@ -28,9 +28,9 @@ public:
 
     DISALLOW_MOVE(AdFilterManager);
 
-    void LoadAdFilter(const kbase::Path& filter_file_path);
+    void LoadAdFilter(const kbase::Path& filter_file);
 
-    void UnloadAdFilter(const kbase::Path& filter_file_path);
+    void UnloadAdFilter(const kbase::Path& filter_file);
 
     bool ShouldBlockRequest(const std::string& request_url,
                             const std::string& request_domain,
