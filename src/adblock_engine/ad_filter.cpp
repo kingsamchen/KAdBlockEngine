@@ -16,6 +16,7 @@
 
 namespace {
 
+using abe::AdFilter;
 using abe::Rule;
 using abe::RuleMap;
 using abe::ThirdParty;
@@ -395,6 +396,31 @@ bool CheckRuleMatch(RuleMap& rule_set, const std::string& keyword, const std::st
 
 namespace abe {
 
+kbase::Pickle& operator<<(kbase::Pickle& pickle, const AdFilter::Info& filter_info)
+{
+    pickle << filter_info.version
+           << filter_info.title
+           << filter_info.last_modified;
+    return pickle;
+}
+
+kbase::Pickle& operator<<(kbase::Pickle& pickle, const Rule& rule)
+{
+    pickle << rule.match_case
+           << static_cast<unsigned int>(rule.third_party)
+           << rule.content_type
+           << rule.domains
+           << rule.transformed
+           << rule.text;
+    return pickle;
+}
+
+kbase::Pickle& operator<<(kbase::Pickle& pickle, const ElemHideRule& elem_hide)
+{
+    pickle << elem_hide.text;
+    return pickle;
+}
+
 Rule::Rule(std::string rule_text)
     : match_case(false),
       third_party(ThirdParty::NOT_SPECIFIED),
@@ -552,6 +578,17 @@ void AdFilter::FetchElementHideRules(const std::string& request_domain,
             }
         }
     }
+}
+
+kbase::Pickle AdFilter::TakeSnapshot() const
+{
+    kbase::Pickle snapshot;
+
+    snapshot << info_;
+    snapshot << blocking_rules_ << exception_rules_;
+    snapshot << elem_hide_rules_ << exception_elem_hide_rules_;
+
+    return snapshot;
 }
 
 LoadingFilterError::LoadingFilterError(const char* message)

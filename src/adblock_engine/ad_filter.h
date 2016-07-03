@@ -15,6 +15,7 @@
 
 #include "kbase/basic_macros.h"
 #include "kbase/path.h"
+#include "kbase/pickle.h"
 #include "kbase/string_view.h"
 
 namespace abe {
@@ -92,6 +93,8 @@ public:
 
     DISALLOW_COPY(AdFilter);
 
+    static AdFilter FromSnapshot(kbase::PickleReader& snapshot);
+
     MatchResult MatchAny(const std::string& request_url,
                          const std::string& request_domain,
                          unsigned int content_type,
@@ -103,6 +106,8 @@ public:
                                std::set<ElemHideRule>& exception_rules) const;
 
     const Info& GetFilterInfo() const;
+
+    kbase::Pickle TakeSnapshot() const;
 
 private:
     void LoadFilterInfo(kbase::StringView comment);
