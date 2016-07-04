@@ -42,12 +42,16 @@ struct Rule {
     std::string text;   // The `text` contains no qualifiers(e.g. exception prefix and options).
 
     explicit Rule(std::string rule_text);
+
+    Rule() = default;
 };
 
 struct ElemHideRule {
     std::string text;   // The text contains no domains.
 
     explicit ElemHideRule(std::string rule_text);
+
+    ElemHideRule() = default;
 };
 
 struct ElemHideRuleHash {
@@ -110,6 +114,8 @@ public:
     kbase::Pickle TakeSnapshot() const;
 
 private:
+    AdFilter() = default;
+
     void LoadFilterInfo(kbase::StringView comment);
 
     void AddRule(kbase::StringView rule);

@@ -395,6 +395,21 @@ bool CheckRuleMatch(RuleMap& rule_set, const std::string& keyword, const std::st
 
 namespace abe {
 
+kbase::Pickle& operator<<(kbase::Pickle& pickle, ThirdParty third_party)
+{
+    unsigned int value = static_cast<unsigned int>(third_party);
+    pickle << value;
+    return pickle;
+}
+
+kbase::PickleReader& operator>>(kbase::PickleReader& reader, ThirdParty& third_party)
+{
+    unsigned int value;
+    reader >> value;
+    third_party = ThirdParty(value);
+    return reader;
+}
+
 kbase::Pickle& operator<<(kbase::Pickle& pickle, const AdFilter::Info& filter_info)
 {
     pickle << filter_info.version
@@ -403,10 +418,18 @@ kbase::Pickle& operator<<(kbase::Pickle& pickle, const AdFilter::Info& filter_in
     return pickle;
 }
 
+kbase::PickleReader& operator>>(kbase::PickleReader& reader, AdFilter::Info& filter_info)
+{
+    reader >> filter_info.version
+           >> filter_info.title
+           >> filter_info.last_modified;
+    return reader;
+}
+
 kbase::Pickle& operator<<(kbase::Pickle& pickle, const Rule& rule)
 {
     pickle << rule.match_case
-           << static_cast<unsigned int>(rule.third_party)
+           << rule.third_party
            << rule.content_type
            << rule.domains
            << rule.transformed
@@ -414,10 +437,27 @@ kbase::Pickle& operator<<(kbase::Pickle& pickle, const Rule& rule)
     return pickle;
 }
 
+kbase::PickleReader& operator>>(kbase::PickleReader& reader, Rule& rule)
+{
+    reader >> rule.match_case
+           >> rule.third_party
+           >> rule.content_type
+           >> rule.domains
+           >> rule.transformed
+           >> rule.text;
+    return reader;
+}
+
 kbase::Pickle& operator<<(kbase::Pickle& pickle, const ElemHideRule& elem_hide)
 {
     pickle << elem_hide.text;
     return pickle;
+}
+
+kbase::PickleReader& operator>>(kbase::PickleReader& reader, ElemHideRule& elem_hide)
+{
+    reader >> elem_hide.text;
+    return reader;
 }
 
 Rule::Rule(std::string rule_text)
@@ -449,6 +489,18 @@ AdFilter::AdFilter(const kbase::Path& filter_file)
 
         AddRule(line);
     }
+}
+
+// static
+AdFilter AdFilter::FromSnapshot(kbase::PickleReader& snapshot)
+{
+    AdFilter ad_filter;
+    snapshot >> ad_filter.info_
+             >> ad_filter.blocking_rules_
+             >> ad_filter.exception_rules_
+             >> ad_filter.elem_hide_rules_
+             >> ad_filter.exception_elem_hide_rules_;
+    return ad_filter;
 }
 
 const AdFilter::Info& AdFilter::GetFilterInfo() const

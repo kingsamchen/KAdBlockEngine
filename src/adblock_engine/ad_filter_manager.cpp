@@ -6,6 +6,7 @@
 
 #include <fstream>
 
+#include "kbase/file_util.h"
 #include "kbase/logging.h"
 #include "kbase/md5.h"
 
@@ -19,6 +20,23 @@ namespace abe {
 
 void AdFilterManager::LoadAdFilter(const kbase::Path& filter_file)
 {
+    kbase::Path snapshot_file(filter_file);
+    snapshot_file.ReplaceExtension(kSnapshotFileExtension);
+    if (kbase::PathExists(snapshot_file)) {
+        std::string file_data = kbase::ReadFileToString(snapshot_file);
+        if (!file_data.empty()) {
+            kbase::MD5Digest checksum;
+            auto snapshot_data = file_data.data() + sizeof(checksum);
+            auto snapshot_data_size = file_data.size() - sizeof(checksum);
+            kbase::MD5Sum(snapshot_data, snapshot_data_size, &checksum);
+            if (memcmp(checksum.data(), file_data.data(), sizeof(checksum))) {
+                kbase::PickleReader snapshot(snapshot_data, snapshot_data_size);
+                AdFilter ad_filter = AdFilter::FromSnapshot(snapshot);
+                ad_filters_.push_back(AdFilterPair(filter_file, std::move(ad_filter)));
+            }
+        }
+    }
+
     // Yeah, we don't check if there was duplicate adfilters.
     ad_filters_.push_back(AdFilterPair(filter_file, AdFilter(filter_file)));
 }
