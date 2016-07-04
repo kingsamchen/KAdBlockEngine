@@ -8,6 +8,7 @@
 
 #include "kbase/error_exception_util.h"
 #include "kbase/file_util.h"
+#include "kbase/md5.h"
 
 #include "adblock_engine/ad_filter.h"
 #include "adblock_engine/ad_filter_manager.h"
@@ -42,10 +43,15 @@ void TestAdFilterSerialization(const kbase::Path& filter_file)
 int main()
 {
     kbase::Path filter_path(LR"(src\test\easylistchina.txt)");
+    abe::AdFilterManager ad_filter_manager;
+    auto start = GetTickCount();
+    ad_filter_manager.LoadAdFilter(filter_path);
+    auto end = GetTickCount();
+    std::cout << end - start;
     //abe::AdFilter ad_filter(filter_path);
     //TestAdFilterMatchAny(ad_filter);
     //TestAdFilterElementHide(ad_filter);
-    TestAdFilterSerialization(filter_path);
+    //TestAdFilterSerialization(filter_path);
     _getch();
     return 0;
 }

@@ -29,10 +29,11 @@ void AdFilterManager::LoadAdFilter(const kbase::Path& filter_file)
             auto snapshot_data = file_data.data() + sizeof(checksum);
             auto snapshot_data_size = file_data.size() - sizeof(checksum);
             kbase::MD5Sum(snapshot_data, snapshot_data_size, &checksum);
-            if (memcmp(checksum.data(), file_data.data(), sizeof(checksum))) {
+            if (memcmp(checksum.data(), file_data.data(), sizeof(checksum)) == 0) {
                 kbase::PickleReader snapshot(snapshot_data, snapshot_data_size);
                 AdFilter ad_filter = AdFilter::FromSnapshot(snapshot);
                 ad_filters_.push_back(AdFilterPair(filter_file, std::move(ad_filter)));
+                return;
             }
         }
     }
